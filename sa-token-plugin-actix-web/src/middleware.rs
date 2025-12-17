@@ -16,13 +16,28 @@ use sa_token_core::{token::TokenValue, SaTokenContext, error::messages};
 use std::sync::Arc;
 
 /// sa-token 基础中间件 - 提取并验证 token
+use sa_token_core::router::PathAuthConfig;
+
+/// Sa-Token middleware with optional path-based authentication
+/// 支持可选路径鉴权的 Sa-Token 中间件
 pub struct SaTokenMiddleware {
     pub state: SaTokenState,
+    /// Optional path authentication configuration
+    /// 可选的路径鉴权配置
+    pub path_config: Option<PathAuthConfig>,
 }
 
 impl SaTokenMiddleware {
+    /// Create middleware without path authentication
+    /// 创建不带路径鉴权的中间件
     pub fn new(state: SaTokenState) -> Self {
-        Self { state }
+        Self { state, path_config: None }
+    }
+    
+    /// Create middleware with path-based authentication
+    /// 创建带路径鉴权的中间件
+    pub fn with_path_auth(state: SaTokenState, config: PathAuthConfig) -> Self {
+        Self { state, path_config: Some(config) }
     }
 }
 
@@ -42,13 +57,19 @@ where
         ready(Ok(SaTokenMiddlewareService {
             service: Rc::new(service),
             state: self.state.clone(),
+            path_config: self.path_config.clone(),
         }))
     }
 }
 
+/// Sa-Token middleware service for Actix-web
+/// Actix-web 的 Sa-Token 中间件服务
 pub struct SaTokenMiddlewareService<S> {
     service: Rc<S>,
     state: SaTokenState,
+    /// Optional path authentication configuration
+    /// 可选的路径鉴权配置
+    path_config: Option<PathAuthConfig>,
 }
 
 impl<S, B> Service<ServiceRequest> for SaTokenMiddlewareService<S>
@@ -66,37 +87,45 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let service = Rc::clone(&self.service);
         let state = self.state.clone();
+        let path_config = self.path_config.clone();
         
         Box::pin(async move {
-            let mut ctx = SaTokenContext::new();
-            
-            tracing::debug!("Sa-Token: 开始处理请求 {} {}", req.method(), req.path());
-            
-            // 提取 token
-            if let Some(token_str) = extract_token_from_request(&req, &state) {
-                tracing::debug!("Sa-Token: extracted token from request: {}", token_str);
-                let token = TokenValue::new(token_str);
+            if let Some(config) = path_config {
+                let path = req.path();
+                let token_str = extract_token_from_request(&req, &state);
+                let result = sa_token_core::router::process_auth(path, token_str, &config, &state.manager).await;
                 
-                // 验证 token
-                if state.manager.is_valid(&token).await {
-                    tracing::debug!("Sa-Token: token 验证成功");
-                    // 存储 token
+                if result.should_reject() {
+                    return Err(ErrorUnauthorized(serde_json::json!({"code": 401, "message": messages::AUTH_ERROR}).to_string()));
+                }
+                
+                if let Some(token) = &result.token {
                     req.extensions_mut().insert(token.clone());
-                    
-                    // 获取并存储 login_id
+                }
+                if let Some(login_id) = result.login_id() {
+                    req.extensions_mut().insert(login_id.to_string());
+                }
+                
+                let ctx = sa_token_core::router::create_context(&result);
+                SaTokenContext::set_current(ctx);
+                let response = service.call(req).await;
+                SaTokenContext::clear();
+                return response;
+            }
+            
+            let mut ctx = SaTokenContext::new();
+            if let Some(token_str) = extract_token_from_request(&req, &state) {
+                let token = TokenValue::new(token_str);
+                if state.manager.is_valid(&token).await {
+                    req.extensions_mut().insert(token.clone());
                     if let Ok(token_info) = state.manager.get_token_info(&token).await {
                         let login_id = token_info.login_id.clone();
-                        tracing::debug!("Sa-Token: login_id = {}", login_id);
                         req.extensions_mut().insert(login_id.clone());
                         ctx.token = Some(token.clone());
                         ctx.token_info = Some(Arc::new(token_info));
                         ctx.login_id = Some(login_id);
                     }
-                } else {
-                    tracing::debug!("Sa-Token: token 验证失败");
                 }
-            } else {
-                tracing::debug!("Sa-Token: 未提取到 token");
             }
             
             SaTokenContext::set_current(ctx);
@@ -197,7 +226,7 @@ where
 }
 
 /// 从请求中提取 token
-fn extract_token_from_request(req: &ServiceRequest, state: &SaTokenState) -> Option<String> {
+pub fn extract_token_from_request(req: &ServiceRequest, state: &SaTokenState) -> Option<String> {
     let adapter = ActixRequestAdapter::new(req.request());
     let token_name = &state.manager.config.token_name;
     
@@ -241,7 +270,6 @@ fn extract_token_from_request(req: &ServiceRequest, state: &SaTokenState) -> Opt
     None
 }
 
-/// 提取 Bearer token
 fn extract_bearer_token(token: &str) -> String {
     if token.starts_with("Bearer ") {
         token[7..].to_string()

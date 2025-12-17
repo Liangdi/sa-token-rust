@@ -83,76 +83,9 @@ pub use extractor::{SaTokenExtractor, OptionalSaTokenExtractor, LoginIdExtractor
 pub use adapter::{WarpRequestAdapter, WarpResponseAdapter};
 pub use state::{SaTokenState, SaTokenStateBuilder};
 
-// ============================================================================
-// 重新导出核心功能（sa-token-core） | Re-export core functionalities (sa-token-core)
-// ============================================================================
-pub use sa_token_core::{self,
-    // 核心管理器 | Core managers
-    SaTokenManager, StpUtil,
-    
-    // 配置 | Configuration
-    SaTokenConfig,
-    config::TokenStyle,
-    
-    // Token 相关 | Token related
-    TokenValue, TokenInfo,
-    
-    // 会话管理 | Session management
-    SaSession,
-    
-    // 权限 | Permissions
-    PermissionChecker,
-    
-    // 错误处理 | Error handling
-    SaTokenError,
-    
-    // 事件系统 | Event system
-    SaTokenEvent, SaTokenListener, SaTokenEventBus, LoggingListener,
-    
-    // JWT 支持 | JWT support
-    JwtManager, JwtClaims, JwtAlgorithm,
-    
-    // OAuth2 支持 | OAuth2 support
-    OAuth2Manager, OAuth2Client, AuthorizationCode, AccessToken, OAuth2TokenInfo,
-    
-    // 安全特性 | Security features
-    NonceManager, RefreshTokenManager,
-    
-    // WebSocket 认证 | WebSocket authentication
-    WsAuthManager, WsAuthInfo, WsTokenExtractor, DefaultWsTokenExtractor,
-    
-    // 在线用户管理 | Online user management
-    OnlineManager, OnlineUser, PushMessage, MessageType, MessagePusher, InMemoryPusher,
-    
-    // 分布式会话 | Distributed session
-    DistributedSessionManager, DistributedSession, DistributedSessionStorage, 
-    ServiceCredential, InMemoryDistributedStorage,
-    
-    // 模块 | Modules
-    token, error
-};
-
-// ============================================================================
-// 重新导出适配器接口（sa-token-adapter） | Re-export adapter interfaces (sa-token-adapter)
-// ============================================================================
-pub use sa_token_adapter::{self,
-    storage::SaStorage,
-    framework::FrameworkAdapter,
-};
-
-// ============================================================================
-// 重新导出宏（sa-token-macro） | Re-export macros (sa-token-macro)
-// ============================================================================
-pub use sa_token_macro::{
-    sa_check_login,
-    sa_check_permission,
-    sa_check_role,
-    sa_check_permissions_and,
-    sa_check_permissions_or,
-    sa_check_roles_and,
-    sa_check_roles_or,
-    sa_ignore,
-};
+pub use sa_token_core::{self, prelude::*};
+pub use sa_token_adapter::{self, storage::SaStorage, framework::FrameworkAdapter};
+pub use sa_token_macro::*;
 
 // ============================================================================
 // 重新导出存储实现（根据 feature 条件编译） | Re-export storage implementations (feature-gated)

@@ -46,87 +46,14 @@ pub mod extractor;
 pub mod adapter;
 pub mod layer;
 
-// ============================================================================
-// Actix-web 框架集成（本插件特有）
-// ============================================================================
-pub use middleware::SaCheckLoginMiddleware;
+pub use middleware::{SaCheckLoginMiddleware, SaTokenMiddleware};
 pub use layer::SaTokenLayer;
-
-// 为保持向后兼容，SaTokenMiddleware 从 layer 模块重新导出
-pub use middleware::SaTokenMiddleware;
 pub use extractor::{SaTokenExtractor, OptionalSaTokenExtractor, LoginIdExtractor};
 pub use adapter::{ActixRequestAdapter, ActixResponseAdapter};
 
-// ============================================================================
-// 重新导出核心功能（sa-token-core）
-// ============================================================================
-pub use sa_token_core::{self, 
-    // 核心管理器
-    SaTokenManager, StpUtil,
-    
-    // 配置
-    SaTokenConfig,
-    config::TokenStyle,
-    
-    // Token 相关
-    TokenValue, TokenInfo,
-    
-    // 会话管理
-    SaSession,
-    
-    // 权限
-    PermissionChecker,
-    
-    // 错误处理
-    SaTokenError,
-    
-    // 事件系统
-    SaTokenEvent, SaTokenListener, SaTokenEventBus, LoggingListener,
-    
-    // JWT 支持
-    JwtManager, JwtClaims, JwtAlgorithm,
-    
-    // OAuth2 支持
-    OAuth2Manager, OAuth2Client, AuthorizationCode, AccessToken, OAuth2TokenInfo,
-    
-    // 安全特性
-    NonceManager, RefreshTokenManager,
-    
-    // WebSocket 认证
-    WsAuthManager, WsAuthInfo, WsTokenExtractor, DefaultWsTokenExtractor,
-    
-    // 在线用户管理
-    OnlineManager, OnlineUser, PushMessage, MessageType, MessagePusher, InMemoryPusher,
-    
-    // 分布式会话
-    DistributedSessionManager, DistributedSession, DistributedSessionStorage, 
-    ServiceCredential, InMemoryDistributedStorage,
-    
-    // 模块
-    token, error
-};
-
-// ============================================================================
-// 重新导出适配器接口（sa-token-adapter）
-// ============================================================================
-pub use sa_token_adapter::{self,
-    storage::SaStorage,
-    framework::FrameworkAdapter,
-};
-
-// ============================================================================
-// 重新导出宏（sa-token-macro）
-// ============================================================================
-pub use sa_token_macro::{
-    sa_check_login,
-    sa_check_permission,
-    sa_check_role,
-    sa_check_permissions_and,
-    sa_check_permissions_or,
-    sa_check_roles_and,
-    sa_check_roles_or,
-    sa_ignore,
-};
+pub use sa_token_core::{self, prelude::*};
+pub use sa_token_adapter::{self, storage::SaStorage, framework::FrameworkAdapter};
+pub use sa_token_macro::*;
 
 // ============================================================================
 // 重新导出存储实现（根据 feature 条件编译）

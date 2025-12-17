@@ -73,6 +73,7 @@ sa-token-rust/
     ├── JWT_GUIDE.md / JWT_GUIDE_zh-CN.md
     ├── OAUTH2_GUIDE.md / OAUTH2_GUIDE_zh-CN.md
     ├── EVENT_LISTENER.md / EVENT_LISTENER_zh-CN.md
+    ├── PATH_AUTH_GUIDE.md / PATH_AUTH_GUIDE_zh-CN.md  # Path-based authentication
     ├── WEBSOCKET_AUTH.md           # WebSocket authentication (7 languages)
     ├── ONLINE_USER_MANAGEMENT.md   # Online user management (7 languages)
     ├── DISTRIBUTED_SESSION.md      # Distributed session (7 languages)
@@ -94,6 +95,7 @@ Core authentication and authorization logic:
 - JWT support with multiple algorithms ([JWT Guide](docs/JWT_GUIDE.md))
 - Security features: Nonce (replay attack prevention), Refresh Token
 - OAuth2 authorization code flow ([OAuth2 Guide](docs/OAUTH2_GUIDE.md))
+- Path-based authentication ([Path Auth Guide](docs/PATH_AUTH_GUIDE.md))
 - WebSocket authentication ([WebSocket Guide](docs/WEBSOCKET_AUTH.md))
 - Online user management and real-time push ([Online User Guide](docs/ONLINE_USER_MANAGEMENT.md))
 - Distributed session for microservices ([Distributed Session Guide](docs/DISTRIBUTED_SESSION.md))
@@ -133,7 +135,7 @@ All plugins provide:
 ```toml
 [dependencies]
 # All-in-one package - includes core, macros, and storage
-sa-token-plugin-axum = "0.1.11"  # Default: memory storage
+sa-token-plugin-axum = "0.1.12"  # Default: memory storage
 tokio = { version = "1", features = ["full"] }
 axum = "0.8"
 ```
@@ -152,13 +154,13 @@ use sa_token_plugin_axum::*;  // ✨ Everything you need!
 **Choose your storage backend with features:**
 ```toml
 # Redis storage
-sa-token-plugin-axum = { version = "0.1.11", features = ["redis"] }
+sa-token-plugin-axum = { version = "0.1.12", features = ["redis"] }
 
 # Multiple storage backends
-sa-token-plugin-axum = { version = "0.1.11", features = ["memory", "redis"] }
+sa-token-plugin-axum = { version = "0.1.12", features = ["memory", "redis"] }
 
 # All storage backends
-sa-token-plugin-axum = { version = "0.1.11", features = ["full"] }
+sa-token-plugin-axum = { version = "0.1.12", features = ["full"] }
 ```
 
 **Available features:**
@@ -182,9 +184,9 @@ If you prefer fine-grained control, you can still import packages separately:
 
 ```toml
 [dependencies]
-sa-token-core = "0.1.11"
-sa-token-storage-memory = "0.1.11"
-sa-token-plugin-axum = "0.1.11"
+sa-token-core = "0.1.12"
+sa-token-storage-memory = "0.1.12"
+sa-token-plugin-axum = "0.1.12"
 tokio = { version = "1", features = ["full"] }
 axum = "0.8"
 ```
@@ -219,7 +221,7 @@ async fn main() {
 **Add Redis feature to your dependency:**
 ```toml
 [dependencies]
-sa-token-plugin-axum = { version = "0.1.11", features = ["redis"] }
+sa-token-plugin-axum = { version = "0.1.12", features = ["redis"] }
 ```
 
 **With simplified import:**
@@ -759,6 +761,7 @@ warp::serve(routes)
 ### Core Documentation
 - [StpUtil API Reference](docs/StpUtil.md) - Complete guide to StpUtil utility class
 - [Permission Matching Rules](docs/PermissionMatching.md#english) - How permission checking works
+- [Path-Based Authentication](docs/PATH_AUTH_GUIDE.md) - Configure path-based authentication
 - [Architecture Overview](docs/ARCHITECTURE.md) - System architecture and design
 - [Quick Start Guide](docs/QUICK_START.md) - Get started quickly
 

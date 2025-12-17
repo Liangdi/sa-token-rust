@@ -6,18 +6,30 @@
 use poem::{Endpoint, Middleware, Request, Result};
 use std::sync::Arc;
 use sa_token_core::{token::TokenValue, SaTokenContext};
+use sa_token_core::router::PathAuthConfig;
 use sa_token_adapter::utils::{parse_cookies, parse_query_string, extract_bearer_token};
 use crate::SaTokenState;
 
-/// Sa-Token layer for Poem framework
-/// Poem 框架的 Sa-Token 层
+/// Sa-Token layer for Poem with optional path-based authentication
+/// 支持可选路径鉴权的 Poem Sa-Token 层
 pub struct SaTokenLayer {
     state: SaTokenState,
+    /// Optional path authentication configuration
+    /// 可选的路径鉴权配置
+    path_config: Option<PathAuthConfig>,
 }
 
 impl SaTokenLayer {
+    /// Create layer without path authentication
+    /// 创建不带路径鉴权的层
     pub fn new(state: SaTokenState) -> Self {
-        Self { state }
+        Self { state, path_config: None }
+    }
+    
+    /// Create layer with path-based authentication
+    /// 创建带路径鉴权的层
+    pub fn with_path_auth(state: SaTokenState, config: PathAuthConfig) -> Self {
+        Self { state, path_config: Some(config) }
     }
 }
 
@@ -31,15 +43,19 @@ where
         SaTokenMiddleware {
             inner: ep,
             state: self.state.clone(),
+            path_config: self.path_config.clone(),
         }
     }
 }
 
-/// Sa-Token middleware for Poem
-/// Poem 的 Sa-Token 中间件
+/// Sa-Token middleware for Poem endpoints
+/// Poem 端点的 Sa-Token 中间件
 pub struct SaTokenMiddleware<E> {
     inner: E,
     state: SaTokenState,
+    /// Optional path authentication configuration
+    /// 可选的路径鉴权配置
+    path_config: Option<PathAuthConfig>,
 }
 
 impl<E> Endpoint for SaTokenMiddleware<E>
@@ -49,10 +65,24 @@ where
     type Output = E::Output;
 
     async fn call(&self, mut req: Request) -> Result<Self::Output> {
-        let mut ctx = SaTokenContext::new();
+        if let Some(config) = &self.path_config {
+            let path = req.uri().path();
+            let token_str = extract_token_from_request(&req, &self.state.manager.config.token_name);
+            let result = sa_token_core::router::process_auth(path, token_str, config, &self.state.manager).await;
+            
+            if result.should_reject() {
+                return Err(poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED));
+            }
+            
+            let ctx = sa_token_core::router::create_context(&result);
+            SaTokenContext::set_current(ctx);
+            let response = self.inner.call(req).await;
+            SaTokenContext::clear();
+            return response;
+        }
         
-        // Extract token from request | 从请求中提取 token
-        if let Some(token_str) = extract_token_from_request(&req, &self.state) {
+        let mut ctx = SaTokenContext::new();
+        if let Some(token_str) = extract_token_from_request(&req, &self.state.manager.config.token_name) {
             tracing::debug!("Sa-Token: extracted token from request: {}", token_str);
             let token = TokenValue::new(token_str);
             
@@ -88,10 +118,7 @@ where
 }
 
 /// Extract token from Poem request | 从 Poem 请求中提取 token
-fn extract_token_from_request(req: &Request, state: &SaTokenState) -> Option<String> {
-    let token_name = &state.manager.config.token_name;
-    
-    // 1. From header | 从 Header 中获取
+pub fn extract_token_from_request(req: &Request, token_name: &str) -> Option<String> {
     if let Some(header_value) = req.headers().get(token_name) {
         if let Ok(value_str) = header_value.to_str() {
             if let Some(token) = extract_bearer_token(value_str) {

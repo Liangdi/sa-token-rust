@@ -127,7 +127,7 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for SaCheckLoginMid
     async fn handle(&self, mut req: Request<State>, next: Next<'_, State>) -> tide::Result {
         let mut ctx = SaTokenContext::new();
         
-        if let Some(token_str) = extract_token_from_request(&req, &self.state) {
+        if let Some(token_str) = extract_token_from_request(&req, &self.state.manager.config.token_name) {
             tracing::debug!("Sa-Token(login-check): extracted token from request: {}", token_str);
             let token = TokenValue::new(token_str);
             
@@ -183,7 +183,7 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for SaCheckPermissi
     async fn handle(&self, mut req: Request<State>, next: Next<'_, State>) -> tide::Result {
         let mut ctx = SaTokenContext::new();
         
-        if let Some(token_str) = extract_token_from_request(&req, &self.state) {
+        if let Some(token_str) = extract_token_from_request(&req, &self.state.manager.config.token_name) {
             tracing::debug!("Sa-Token(permission-check): extracted token from request: {}", token_str);
             let token = TokenValue::new(token_str);
             
@@ -243,7 +243,7 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for SaCheckRoleMidd
     async fn handle(&self, mut req: Request<State>, next: Next<'_, State>) -> tide::Result {
         let mut ctx = SaTokenContext::new();
         
-        if let Some(token_str) = extract_token_from_request(&req, &self.state) {
+        if let Some(token_str) = extract_token_from_request(&req, &self.state.manager.config.token_name) {
             tracing::debug!("Sa-Token(role-check): extracted token from request: {}", token_str);
             let token = TokenValue::new(token_str);
             

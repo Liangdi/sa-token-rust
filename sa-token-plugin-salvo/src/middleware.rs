@@ -124,7 +124,7 @@ impl Handler for SaCheckLoginMiddleware {
     async fn handle(&self, req: &mut Request, depot: &mut Depot, res: &mut Response, ctrl: &mut FlowCtrl) {
         let mut ctx = SaTokenContext::new();
         
-        if let Some(token_str) = extract_token_from_request(req, &self.state) {
+        if let Some(token_str) = extract_token_from_request(req, &self.state.manager.config.token_name) {
             tracing::debug!("Sa-Token(login-check): extracted token from request: {}", token_str);
             let token = TokenValue::new(token_str);
             
@@ -179,7 +179,7 @@ impl Handler for SaCheckPermissionMiddleware {
     async fn handle(&self, req: &mut Request, depot: &mut Depot, res: &mut Response, ctrl: &mut FlowCtrl) {
         let mut ctx = SaTokenContext::new();
         
-        if let Some(token_str) = extract_token_from_request(req, &self.state) {
+        if let Some(token_str) = extract_token_from_request(req, &self.state.manager.config.token_name) {
             tracing::debug!("Sa-Token(permission-check): extracted token from request: {}", token_str);
             let token = TokenValue::new(token_str);
             
@@ -238,7 +238,7 @@ impl Handler for SaCheckRoleMiddleware {
     async fn handle(&self, req: &mut Request, depot: &mut Depot, res: &mut Response, ctrl: &mut FlowCtrl) {
         let mut ctx = SaTokenContext::new();
         
-        if let Some(token_str) = extract_token_from_request(req, &self.state) {
+        if let Some(token_str) = extract_token_from_request(req, &self.state.manager.config.token_name) {
             tracing::debug!("Sa-Token(role-check): extracted token from request: {}", token_str);
             let token = TokenValue::new(token_str);
             

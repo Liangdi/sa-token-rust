@@ -7,18 +7,26 @@ use tower::{Layer, Service};
 use http::{Request, Response};
 use sa_token_adapter::context::SaRequest;
 use crate::{SaTokenState, adapter::AxumRequestAdapter};
-use sa_token_core::SaTokenContext;
+use sa_token_core::{SaTokenContext, router::PathAuthConfig};
 use std::sync::Arc;
 
-/// sa-token中间件层
+/// Sa-Token layer for Axum with optional path-based authentication
+/// 支持可选路径鉴权的 Axum Sa-Token 层
 #[derive(Clone)]
 pub struct SaTokenLayer {
     state: SaTokenState,
+    /// Optional path authentication configuration
+    /// 可选的路径鉴权配置
+    path_config: Option<PathAuthConfig>,
 }
 
 impl SaTokenLayer {
     pub fn new(state: SaTokenState) -> Self {
-        Self { state }
+        Self { state, path_config: None }
+    }
+    
+    pub fn with_path_auth(state: SaTokenState, config: PathAuthConfig) -> Self {
+        Self { state, path_config: Some(config) }
     }
 }
 
@@ -29,15 +37,18 @@ impl<S> Layer<S> for SaTokenLayer {
         SaTokenMiddleware {
             inner,
             state: self.state.clone(),
+            path_config: self.path_config.clone(),
         }
     }
 }
 
-/// sa-token中间件服务
 #[derive(Clone)]
 pub struct SaTokenMiddleware<S> {
     pub(crate) inner: S,
     pub(crate) state: SaTokenState,
+    /// Optional path authentication configuration
+    /// 可选的路径鉴权配置
+    pub(crate) path_config: Option<PathAuthConfig>,
 }
 
 impl<S, ReqBody, ResBody> Service<Request<ReqBody>> for SaTokenMiddleware<S>
@@ -45,6 +56,7 @@ where
     S: Service<Request<ReqBody>, Response = Response<ResBody>> + Clone + Send + 'static,
     S::Future: Send + 'static,
     ReqBody: Send + 'static,
+    ResBody: Default + Send + 'static,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -57,27 +69,44 @@ where
     fn call(&mut self, mut request: Request<ReqBody>) -> Self::Future {
         let mut inner = self.inner.clone();
         let state = self.state.clone();
+        let path_config = self.path_config.clone();
         
         Box::pin(async move {
-            let mut ctx = SaTokenContext::new();
-            
-            // 从请求中提取 token
-            if let Some(token_str) = extract_token_from_request(&request, &state) {
-                tracing::debug!("Sa-Token: extracted token from request: {}", token_str);
-                let token = sa_token_core::token::TokenValue::new(token_str);
+            if let Some(config) = path_config {
+                let path = request.uri().path();
+                let token_str = extract_token_from_request(&request, &state);
+                let result = sa_token_core::router::process_auth(path, token_str, &config, &state.manager).await;
                 
-                // 验证 token 是否有效
-                if state.manager.is_valid(&token).await {
-                    // 将 token 存储到请求扩展中
+                if result.should_reject() {
+                    let mut response = Response::new(ResBody::default());
+                    *response.status_mut() = http::StatusCode::UNAUTHORIZED;
+                    return Ok(response);
+                }
+                
+                if let Some(token) = &result.token {
                     request.extensions_mut().insert(token.clone());
-                    
-                    // 尝试获取 token 信息并存储 login_id
-                    // 注意：get_token_info 内部已经处理了自动续签（如果配置开启）
+                }
+                if let Some(login_id) = result.login_id() {
+                    request.extensions_mut().insert(login_id.to_string());
+                }
+                
+                let ctx = sa_token_core::router::create_context(&result);
+                SaTokenContext::set_current(ctx);
+                let response = inner.call(request).await;
+                SaTokenContext::clear();
+                return response;
+            }
+            
+            // No path auth config, use default token extraction and validation
+            // 没有路径鉴权配置，使用默认的 token 提取和验证
+            let mut ctx = SaTokenContext::new();
+            if let Some(token_str) = extract_token_from_request(&request, &state) {
+                let token = sa_token_core::token::TokenValue::new(token_str);
+                if state.manager.is_valid(&token).await {
+                    request.extensions_mut().insert(token.clone());
                     if let Ok(token_info) = state.manager.get_token_info(&token).await {
                         let login_id = token_info.login_id.clone();
                         request.extensions_mut().insert(login_id.clone());
-                        
-                        // 设置上下文
                         ctx.token = Some(token.clone());
                         ctx.token_info = Some(Arc::new(token_info));
                         ctx.login_id = Some(login_id);
@@ -85,15 +114,9 @@ where
                 }
             }
             
-            // 设置当前请求的上下文
             SaTokenContext::set_current(ctx);
-            
-            // 继续处理请求
             let response = inner.call(request).await;
-            
-            // 清除上下文
             SaTokenContext::clear();
-            
             response
         })
     }
@@ -114,7 +137,7 @@ where
 /// # 返回
 /// - `Some(token)` - 找到有效的 token
 /// - `None` - 未找到 token
-fn extract_token_from_request<T>(request: &Request<T>, state: &SaTokenState) -> Option<String> {
+pub fn extract_token_from_request<T>(request: &Request<T>, state: &SaTokenState) -> Option<String> {
     let adapter = AxumRequestAdapter::new(request);
     // 从配置中获取 token_name
     let token_name = &state.manager.config.token_name;
@@ -163,12 +186,10 @@ fn extract_bearer_token(header_value: &str) -> String {
     }
 }
 
-/// 从 Query 字符串中解析参数
 fn parse_query_param(query: &str, param_name: &str) -> Option<String> {
     for pair in query.split('&') {
         let parts: Vec<&str> = pair.splitn(2, '=').collect();
         if parts.len() == 2 && parts[0] == param_name {
-            // URL 解码
             return urlencoding::decode(parts[1])
                 .ok()
                 .map(|s| s.into_owned());

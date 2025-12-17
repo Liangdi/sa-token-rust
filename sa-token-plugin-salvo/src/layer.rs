@@ -1,26 +1,58 @@
 use salvo::{Depot, Request, Response, Handler, FlowCtrl};
-use sa_token_core::{token::TokenValue, SaTokenContext};
+use salvo::http::StatusCode;
+use sa_token_core::{token::TokenValue, SaTokenContext, router::PathAuthConfig};
 use crate::state::SaTokenState;
 use std::sync::Arc;
 use sa_token_adapter::utils::{parse_cookies, parse_query_string, extract_bearer_token as utils_extract_bearer_token};
 
+/// Sa-Token layer for Salvo with optional path-based authentication
+/// 支持可选路径鉴权的 Salvo Sa-Token 层
 #[derive(Clone)]
 pub struct SaTokenLayer {
     state: SaTokenState,
+    /// Optional path authentication configuration
+    /// 可选的路径鉴权配置
+    path_config: Option<PathAuthConfig>,
 }
 
 impl SaTokenLayer {
+    /// Create layer without path authentication
+    /// 创建不带路径鉴权的层
     pub fn new(state: SaTokenState) -> Self {
-        Self { state }
+        Self { state, path_config: None }
+    }
+    
+    /// Create layer with path-based authentication
+    /// 创建带路径鉴权的层
+    pub fn with_path_auth(state: SaTokenState, config: PathAuthConfig) -> Self {
+        Self { state, path_config: Some(config) }
     }
 }
 
 #[salvo::async_trait]
 impl Handler for SaTokenLayer {
     async fn handle(&self, req: &mut Request, depot: &mut Depot, res: &mut Response, ctrl: &mut FlowCtrl) {
-        let mut ctx = SaTokenContext::new();
+        if let Some(config) = &self.path_config {
+            let path = req.uri().path();
+            let token_str = extract_token_from_request(req, &self.state.manager.config.token_name);
+            let result = sa_token_core::router::process_auth(path, token_str, config, &self.state.manager).await;
+            
+            if result.should_reject() {
+                res.status_code(StatusCode::UNAUTHORIZED);
+                return;
+            }
+            
+            let ctx = sa_token_core::router::create_context(&result);
+            SaTokenContext::set_current(ctx);
+            ctrl.call_next(req, depot, res).await;
+            SaTokenContext::clear();
+            return;
+        }
         
-        if let Some(token_str) = extract_token_from_request(req, &self.state) {
+        // No path auth config, use default token extraction and validation
+        // 没有路径鉴权配置，使用默认的 token 提取和验证
+        let mut ctx = SaTokenContext::new();
+        if let Some(token_str) = extract_token_from_request(req, &self.state.manager.config.token_name) {
             tracing::debug!("Sa-Token: extracted token from request: {}", token_str);
             let token = TokenValue::new(token_str);
             
@@ -52,8 +84,7 @@ impl Handler for SaTokenLayer {
 /// 2. 从 Authorization 请求头 | From Authorization header
 /// 3. 从 Cookie | From cookie
 /// 4. 从查询参数 | From query parameter
-pub fn extract_token_from_request(req: &Request, state: &SaTokenState) -> Option<String> {
-    let token_name = &state.manager.config.token_name;
+pub fn extract_token_from_request(req: &Request, token_name: &str) -> Option<String> {
     
     // 1. 从指定名称的请求头提取 | Extract from specified header name
     if let Some(header_value) = req.headers().get(token_name) {

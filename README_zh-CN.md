@@ -73,6 +73,7 @@ sa-token-rust/
     ├── JWT_GUIDE.md / JWT_GUIDE_zh-CN.md
     ├── OAUTH2_GUIDE.md / OAUTH2_GUIDE_zh-CN.md
     ├── EVENT_LISTENER.md / EVENT_LISTENER_zh-CN.md
+    ├── PATH_AUTH_GUIDE.md / PATH_AUTH_GUIDE_zh-CN.md  # 路径鉴权
     ├── WEBSOCKET_AUTH.md           # WebSocket 认证（7 种语言）
     ├── ONLINE_USER_MANAGEMENT.md   # 在线用户管理（7 种语言）
     ├── DISTRIBUTED_SESSION.md      # 分布式 Session（7 种语言）
@@ -119,6 +120,7 @@ sa-token-rust/
 - JWT 支持，多种算法 ([JWT 指南](docs/JWT_GUIDE_zh-CN.md))
 - 安全特性：Nonce 防重放攻击、Refresh Token 刷新机制
 - OAuth2 授权码模式 ([OAuth2 指南](docs/OAUTH2_GUIDE_zh-CN.md))
+- 路径鉴权 ([路径鉴权指南](docs/PATH_AUTH_GUIDE_zh-CN.md))
 - WebSocket 认证 ([WebSocket 指南](docs/WEBSOCKET_AUTH.md))
 - 在线用户管理和实时推送 ([在线用户指南](docs/ONLINE_USER_MANAGEMENT.md))
 - 微服务分布式 Session ([分布式 Session 指南](docs/DISTRIBUTED_SESSION.md))
@@ -158,7 +160,7 @@ sa-token-rust/
 ```toml
 [dependencies]
 # 一站式包 - 包含核心、宏和存储
-sa-token-plugin-axum = "0.1.11"  # 默认：内存存储
+sa-token-plugin-axum = "0.1.12"  # 默认：内存存储
 tokio = { version = "1", features = ["full"] }
 axum = "0.8"
 ```
@@ -177,13 +179,13 @@ use sa_token_plugin_axum::*;  // ✨ 你需要的一切！
 **通过 features 选择存储后端：**
 ```toml
 # Redis 存储
-sa-token-plugin-axum = { version = "0.1.11", features = ["redis"] }
+sa-token-plugin-axum = { version = "0.1.12", features = ["redis"] }
 
 # 多个存储后端
-sa-token-plugin-axum = { version = "0.1.11", features = ["memory", "redis"] }
+sa-token-plugin-axum = { version = "0.1.12", features = ["memory", "redis"] }
 
 # 所有存储后端
-sa-token-plugin-axum = { version = "0.1.11", features = ["full"] }
+sa-token-plugin-axum = { version = "0.1.12", features = ["full"] }
 ```
 
 **可用的 features：**
@@ -207,9 +209,9 @@ sa-token-plugin-axum = { version = "0.1.11", features = ["full"] }
 
 ```toml
 [dependencies]
-sa-token-core = "0.1.11"
-sa-token-storage-memory = "0.1.11"
-sa-token-plugin-axum = "0.1.11"
+sa-token-core = "0.1.12"
+sa-token-storage-memory = "0.1.12"
+sa-token-plugin-axum = "0.1.12"
 tokio = { version = "1", features = ["full"] }
 axum = "0.8"
 ```
@@ -244,7 +246,7 @@ async fn main() {
 **添加 Redis feature 到依赖：**
 ```toml
 [dependencies]
-sa-token-plugin-axum = { version = "0.1.11", features = ["redis"] }
+sa-token-plugin-axum = { version = "0.1.12", features = ["redis"] }
 ```
 
 **使用简化导入：**
@@ -782,6 +784,7 @@ warp::serve(routes)
 ### 核心文档
 - [StpUtil API 参考](docs/StpUtil_zh-CN.md) - StpUtil 工具类完整指南
 - [权限匹配规则](docs/PermissionMatching.md#中文) - 权限检查工作原理
+- [路径鉴权](docs/PATH_AUTH_GUIDE_zh-CN.md) - 配置基于路径的鉴权
 - [架构概览](docs/ARCHITECTURE.md) - 系统架构和设计
 - [快速开始指南](docs/QUICK_START.md) - 快速入门
 

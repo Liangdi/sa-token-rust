@@ -13,7 +13,7 @@ Warp framework integration for sa-token-rust.
 
 ```toml
 [dependencies]
-sa-token-plugin-warp = { version = "0.1.11", features = ["redis"] }
+sa-token-plugin-warp = { version = "0.1.12", features = ["redis"] }
 warp = "0.3"
 tokio = { version = "1", features = ["full"] }
 ```
@@ -43,6 +43,15 @@ async fn main() {
         .await;
 }
 ```
+
+## Version History
+
+### 0.1.12
+- ✨ Added path-based authentication support for fine-grained access control
+- 🔧 Optimized middleware implementation, reduced code duplication
+
+### 0.1.11
+- Initial release with basic features
 
 ## Author
 

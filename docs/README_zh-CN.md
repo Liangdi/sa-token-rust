@@ -106,7 +106,7 @@ cargo run --example distributed_session_example
 ```toml
 [dependencies]
 # 一站式包（选择你的框架）
-sa-token-plugin-axum = "0.1.11"  # 或 actix-web, poem, rocket, warp
+sa-token-plugin-axum = "0.1.12"  # 或 actix-web, poem, rocket, warp
 ```
 
 ```rust
@@ -170,7 +170,7 @@ use sa_token_plugin_axum::*;  // ✨ 包含所有功能！
 
 **通过 features 轻松切换：**
 ```toml
-sa-token-plugin-axum = { version = "0.1.11", features = ["redis"] }
+sa-token-plugin-axum = { version = "0.1.12", features = ["redis"] }
 ```
 
 ---

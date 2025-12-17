@@ -19,8 +19,8 @@ Core authentication and authorization library for sa-token-rust.
 
 ```toml
 [dependencies]
-sa-token-core = "0.1.11"
-sa-token-adapter = "0.1.11"
+sa-token-core = "0.1.12"
+sa-token-adapter = "0.1.12"
 tokio = { version = "1", features = ["full"] }
 ```
 

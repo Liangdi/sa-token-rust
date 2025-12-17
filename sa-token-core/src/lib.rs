@@ -34,6 +34,8 @@ pub mod ws;
 pub mod online;
 pub mod distributed;
 pub mod sso;
+pub mod router;
+pub mod prelude;
 
 pub mod error;
 mod manager;
@@ -64,3 +66,4 @@ pub use distributed::{
 pub use sso::{
     SsoServer, SsoClient, SsoManager, SsoTicket, SsoSession, SsoConfig
 };
+pub use router::{match_path, match_any, need_auth, PathAuthConfig};
