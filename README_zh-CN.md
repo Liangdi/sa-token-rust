@@ -85,7 +85,9 @@ sa-token-rust/
 
 下面通过架构图来更直观地理解 sa-token-rust 的设计思路和组件关系：
 
-<img src="docs/IMG_3972.JPG" alt="sa-token-rust 架构图" width="200px" height="300px" />
+<!-- <img src="docs/IMG_3972.JPG" alt="sa-token-rust 架构图" width="200px" height="300px" /> -->
+
+<img src="https://sa-token.cc/big-file/contact/sa-token-rust--wx-group-qr.png" alt="sa-token-rust 微信交流群" width="200px" height="300px" />
 
 **架构说明：**
 
